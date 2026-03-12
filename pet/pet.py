@@ -3,10 +3,10 @@ import time
 import random
 import winsound
 
+
 class Pet:
     def __init__(self):
         self.window = tk.Tk()
-        print("Pet initializing...")
 
         # CONFIG
         self.scale = 3
@@ -96,16 +96,19 @@ class Pet:
 
         # Sound timing
         self.last_sound_time = time.time()
-        self.sound_interval = random.randint(1200, 1800)  # 14–17 minutes (in seconds)
+        self.sound_interval = random.randint(600, 1200)  # 14–17 minutes (in seconds)
 
         self.update()
         self.window.mainloop()
 
     def play_meow(self):
         try:
-            winsound.PlaySound("assets/sounds/meow.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
-        except:
-            print("Missing meow.wav")
+            winsound.PlaySound(None, winsound.SND_PURGE)  # stop previous sound
+            winsound.PlaySound(
+                "assets/sounds/meow.wav", winsound.SND_FILENAME | winsound.SND_ASYNC
+            )
+        except Exception as e:
+            print("Sound error:", e)
 
     def load_gif(self, path):
         frames = []
@@ -248,7 +251,7 @@ class Pet:
         if now - self.last_sound_time > self.sound_interval:
             self.play_meow()
             self.last_sound_time = now
-            self.sound_interval = random.randint(1200, 1800)
+            self.sound_interval = random.randint(600, 1200)
 
         # Angry state priority
         if now < self.angry_until:
