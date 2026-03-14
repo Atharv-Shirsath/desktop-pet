@@ -2,6 +2,59 @@ import tkinter as tk
 import time
 import random
 import winsound
+from enum import Enum
+
+ANIMATION_FILES = {
+    "idle_right": "idle_right.gif",
+    "idle_left": "idle_left.gif",
+    "standing_up_idle_right": "standing_up_idle_right.gif",
+    "standing_up_idle_left": "standing_up_idle_left.gif",
+    "standing_up_idle_1_right": "standing_up_idle_1_right.gif",
+    "standing_up_idle_1_left": "standing_up_idle_1_left.gif",
+    "sit_down_right": "sit_down_right.gif",
+    "sit_down_left": "sit_down_left.gif",
+    "napping": "napping.gif",
+    "looking_around_napping": "looking_around_while_napping.gif",
+    "stand_up_right": "stand_up_right.gif",
+    "stand_up_left": "stand_up_left.gif",
+    "run_right": "running_right.gif",
+    "run_left": "running_left.gif",
+    "fast_run_right": "fast_running_right.gif",
+    "fast_run_left": "fast_running_left.gif",
+    "walk_2_right": "walking_on_2_legs_right.gif",
+    "walk_2_left": "walking_on_2_legs_left.gif",
+    "stop_right": "running_stop_right.gif",
+    "stop_left": "running_stop_left.gif",
+    "angry_right": "angry_right.gif",
+    "angry_left": "angry_left.gif",
+}
+
+
+class Direction(Enum):
+    LEFT = -1
+    RIGHT = 1
+
+
+class PetState(Enum):
+    IDLE = "idle"
+    RUN = "run"
+    FAST_RUN = "fast_run"
+    WALK = "walk_2"
+    STOP = "stop"
+    SIT_DOWN = "sit_down"
+    STAND_UP = "stand_up"
+    STANDING_IDLE = "standing_up_idle"
+    STANDING_IDLE_1 = "standing_up_idle_1"
+    NAP = "napping"
+    LOOK_NAP = "looking_around_napping"
+    ANGRY = "angry"
+
+
+class MovementController:
+    SPEED_MAP = {PetState.FAST_RUN: 6, PetState.RUN: 3, PetState.WALK: 1}
+
+    def get_speed(self, state):
+        return self.SPEED_MAP.get(state, 0)
 
 
 class Pet:
@@ -12,47 +65,15 @@ class Pet:
         self.scale = 3
         self.frame_delay = 100  # ms per frame
 
-        # LOAD ANIMATIONS
-        self.anims = {
-            "idle_right": self.load_gif("assets/gifs/idle_right.gif"),
-            "idle_left": self.load_gif("assets/gifs/idle_left.gif"),
-            "standing_up_idle_right": self.load_gif(
-                "assets/gifs/standing_up_idle_right.gif"
-            ),
-            "standing_up_idle_left": self.load_gif(
-                "assets/gifs/standing_up_idle_left.gif"
-            ),
-            "standing_up_idle_1_right": self.load_gif(
-                "assets/gifs/standing_up_idle_1_right.gif"
-            ),
-            "standing_up_idle_1_left": self.load_gif(
-                "assets/gifs/standing_up_idle_1_left.gif"
-            ),
-            "sit_down_right": self.load_gif("assets/gifs/sit_down_right.gif"),
-            "sit_down_left": self.load_gif("assets/gifs/sit_down_left.gif"),
-            "napping": self.load_gif("assets/gifs/napping.gif"),
-            "looking_around_napping": self.load_gif(
-                "assets/gifs/looking_around_while_napping.gif"
-            ),
-            "stand_up_right": self.load_gif("assets/gifs/stand_up_right.gif"),
-            "stand_up_left": self.load_gif("assets/gifs/stand_up_left.gif"),
-            "run_right": self.load_gif("assets/gifs/running_right.gif"),
-            "run_left": self.load_gif("assets/gifs/running_left.gif"),
-            "fast_run_right": self.load_gif("assets/gifs/fast_running_right.gif"),
-            "fast_run_left": self.load_gif("assets/gifs/fast_running_left.gif"),
-            "walk_2_right": self.load_gif("assets/gifs/walking_on_2_legs_right.gif"),
-            "walk_2_left": self.load_gif("assets/gifs/walking_on_2_legs_left.gif"),
-            "stop_right": self.load_gif("assets/gifs/running_stop_right.gif"),
-            "stop_left": self.load_gif("assets/gifs/running_stop_left.gif"),
-            "angry_right": self.load_gif("assets/gifs/angry_right.gif"),
-            "angry_left": self.load_gif("assets/gifs/angry_left.gif"),
-        }
+        self.movement = MovementController()
 
-        self.horizontal_dir = 1  # 1:right, -1:left
+        self.anims = self.load_all_animations()
+
+        self.direction = Direction.RIGHT  # 1:right, -1:left
         self.vertical_dir = 0  # vertical movement disabled for horizontal-only
 
-        self.state = "idle_right"
-        self.frames = self.anims[self.state]
+        self.state = PetState.IDLE
+        self.frames = self.anims[self.get_anim_key()]
         self.frame_idx = 0
 
         self.start_time = time.time()
@@ -101,6 +122,15 @@ class Pet:
         self.update()
         self.window.mainloop()
 
+    def load_all_animations(self):
+        anims = {}
+
+        for name, filename in ANIMATION_FILES.items():
+            path = f"assets/gifs/{filename}"
+            anims[name] = self.load_gif(path)
+
+        return anims
+
     def play_meow(self):
         try:
             winsound.PlaySound(None, winsound.SND_PURGE)  # stop previous sound
@@ -124,8 +154,21 @@ class Pet:
             print(f"Missing file: {path}")
         return frames
 
-    def get_direction_suffix(self):
-        return "_right" if self.horizontal_dir == 1 else "_left"
+    def get_anim_key(self):
+        if self.state in [PetState.NAP, PetState.LOOK_NAP]:
+            return self.state.value
+
+        direction = "right" if self.direction == Direction.RIGHT else "left"
+        return f"{self.state.value}_{direction}"
+
+    def set_state(self, state, duration=0):
+        self.state = state
+        key = self.get_anim_key()
+
+        self.frames = self.anims.get(key, [])
+        self.frame_idx = 0
+        self.start_time = time.time()
+        self.duration = duration
 
     # Left click press - record starting position, reset dragging flag
     def start_drag_or_click(self, event):
@@ -158,169 +201,134 @@ class Pet:
 
     # Right click makes pet angry
     def make_angry(self, event=None):
-        sfx = self.get_direction_suffix()
-        self.state = f"angry{sfx}"
-        self.frames = self.anims[self.state]
-        self.frame_idx = 0
-        self.start_time = time.time()
-        self.duration = 3
+        self.set_state(PetState.ANGRY, 3)
         self.angry_until = time.time() + self.duration
-        self.vertical_dir = 0
 
     def transition(self):
-        # If angry duration not over, do not transition
         if time.time() < self.angry_until:
             return
 
-        sfx = self.get_direction_suffix()
         curr = self.state
 
-        if any(x in curr for x in ["sit_down", "stand_up", "stop"]):
-            self.state = f"idle{sfx}"
-            self.duration = random.randint(4, 8)
-            self.vertical_dir = 0
+        # SIT / STAND / STOP -> IDLE
+        if curr in [PetState.SIT_DOWN, PetState.STAND_UP, PetState.STOP]:
+            self.set_state(PetState.IDLE, random.randint(4, 8))
 
-        elif "napping" in curr:
-            self.vertical_dir = 0
+        # NAPPING
+        elif curr == PetState.NAP:
             if random.random() < 0.2:
-                self.state = f"stand_up{sfx}"
-                self.duration = 0
+                self.set_state(PetState.STAND_UP, 0)
             else:
-                self.state = (
-                    "looking_around_napping" if random.random() < 0.4 else "napping"
-                )
-                self.duration = 8
+                if random.random() < 0.4:
+                    self.set_state(PetState.LOOK_NAP, 8)
+                else:
+                    self.set_state(PetState.NAP, 8)
 
-        elif "idle" in curr:
+        # IDLE -> movement or sit
+        elif curr == PetState.IDLE:
             rand = random.random()
-            if rand < 0.5:
-                if random.random() < 0.3:
-                    self.horizontal_dir *= -1
-                new_sfx = self.get_direction_suffix()
 
-                self.vertical_dir = 0
-                self.state = random.choice(
-                    [f"run{new_sfx}", f"walk_2{new_sfx}", f"fast_run{new_sfx}"]
+            if rand < 0.5:
+
+                if random.random() < 0.3:
+                    self.direction = (
+                        Direction.LEFT
+                        if self.direction == Direction.RIGHT
+                        else Direction.RIGHT
+                    )
+
+                self.set_state(
+                    random.choice([PetState.RUN, PetState.WALK, PetState.FAST_RUN]),
+                    random.randint(5, 10),
                 )
-                self.duration = random.randint(5, 10)
 
             elif rand < 0.7:
-                self.vertical_dir = 0
+
                 if random.random() < 0.7:
-                    self.state = f"sit_down{sfx}"
-                    self.duration = 0
+                    self.set_state(PetState.SIT_DOWN, 0)
                 else:
-                    self.state = "napping"
-                    self.duration = 10
+                    self.set_state(PetState.NAP, 10)
 
             else:
-                self.vertical_dir = 0
-                self.state = f"standing_up_idle_1{sfx}"
-                self.duration = 5
+                self.set_state(PetState.STANDING_IDLE_1, 5)
 
-        elif any(x in curr for x in ["run", "walk"]):
+        # MOVING STATES
+        elif curr in [PetState.RUN, PetState.WALK, PetState.FAST_RUN]:
+
             if random.random() < 0.4:
-                self.state = f"stop{sfx}"
-                self.duration = 0
-                self.vertical_dir = 0
+                self.set_state(PetState.STOP, 0)
             else:
-                self.vertical_dir = 0
                 self.duration = random.randint(3, 6)
 
         else:
-            self.state = f"idle{sfx}"
-            self.duration = 5
-            self.vertical_dir = 0
+            self.set_state(PetState.IDLE, 5)
 
-        self.frames = self.anims.get(self.state, self.anims[f"idle{sfx}"])
-        self.frame_idx = 0
-        self.start_time = time.time()
-
-    def update(self):
-        if self.dragging:
-            # Dragging logic unchanged
-            if self.frames:
-                self.label.config(image=self.frames[self.frame_idx])
-                self.frame_idx = (self.frame_idx + 1) % len(self.frames)
-            self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
-            self.window.after(self.frame_delay, self.update)
-            return
-
-        now = time.time()
-        # Timed sound
+    def handle_sound(self, now):
         if now - self.last_sound_time > self.sound_interval:
             self.play_meow()
             self.last_sound_time = now
             self.sound_interval = random.randint(600, 1200)
 
-        # Angry state priority
-        if now < self.angry_until:
-            if not ("angry_right" in self.state or "angry_left" in self.state):
-                sfx = self.get_direction_suffix()
-                self.state = f"angry{sfx}"
-                self.frames = self.anims[self.state]
-                self.frame_idx = 0
-                self.start_time = now
-            self.vertical_dir = 0
-            if self.frames:
-                self.label.config(image=self.frames[self.frame_idx])
-                self.frame_idx = (self.frame_idx + 1) % len(self.frames)
-            self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
-            self.window.after(self.frame_delay, self.update)
+    def update_animation(self):
+        if self.frames:
+            self.label.config(image=self.frames[self.frame_idx])
+            self.frame_idx = (self.frame_idx + 1) % len(self.frames)
+
+    def move_pet(self):
+        speed = self.movement.get_speed(self.state)
+        self.x += speed * self.direction.value
+
+    def handle_wall_collision(self):
+        if not self.frames:
             return
 
-        # Movement speed map (pixels per update)
-        speed_map = {
-            "fast_run": 6,
-            "run": 3,
-            "walk_2": 1,
-        }
-        speed = 0
-        for key, val in speed_map.items():
-            if key in self.state:
-                speed = val
-                break
-
-        # Move horizontally by speed pixels per update
-        self.x += speed * self.horizontal_dir
-
         pet_w = self.frames[0].width()
-        pet_h = self.frames[0].height()
 
         hit_wall = False
 
         if self.x < 0:
             self.x = 5
-            self.horizontal_dir = 1
+            self.direction = Direction.RIGHT
             hit_wall = True
+
         elif self.x > self.screen_w - pet_w:
             self.x = self.screen_w - pet_w - 5
-            self.horizontal_dir = -1
+            self.direction = Direction.LEFT
             hit_wall = True
 
         if hit_wall:
-            sfx = self.get_direction_suffix()
-            if f"stop{sfx}" in self.anims:
-                self.state = f"stop{sfx}"
-            else:
-                self.state = f"idle{sfx}"
-            self.frames = self.anims[self.state]
-            self.frame_idx = 0
-            self.start_time = now
-            self.duration = 0
-            self.vertical_dir = 0
+            self.set_state(PetState.STOP, 0)
 
-        if self.frames:
-            self.label.config(image=self.frames[self.frame_idx])
-            self.frame_idx = (self.frame_idx + 1) % len(self.frames)
-        else:
-            print(f"Error: No frames for state {self.state}")
+    def update(self):
+        now = time.time()
+
+        self.handle_sound(now)
+
+        if self.dragging:
+            self.update_animation()
+            self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
+            self.window.after(self.frame_delay, self.update)
+            return
+
+        if now < self.angry_until:
+            if self.state != PetState.ANGRY:
+                self.set_state(PetState.ANGRY, 3)
+
+            self.update_animation()
+            self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
+            self.window.after(self.frame_delay, self.update)
+            return
+
+        self.move_pet()
+
+        self.handle_wall_collision()
+
+        self.update_animation()
 
         self.window.geometry(f"+{int(self.x)}+{int(self.y)}")
 
-        # Only transition if not angry
+        time_passed = now - self.start_time
         if now >= self.angry_until:
-            time_passed = now - self.start_time
             if (self.duration == 0 and self.frame_idx == 0) or (
                 self.duration > 0 and time_passed > self.duration
             ):
