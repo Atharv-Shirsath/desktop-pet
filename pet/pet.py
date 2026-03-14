@@ -117,7 +117,7 @@ class Pet:
 
         # Sound timing
         self.last_sound_time = time.time()
-        self.sound_interval = random.randint(600, 1200)  # 14–17 minutes (in seconds)
+        self.sound_interval = random.randint(60 ,180)
 
         self.update()
         self.window.mainloop()
@@ -265,9 +265,10 @@ class Pet:
 
     def handle_sound(self, now):
         if now - self.last_sound_time > self.sound_interval:
+            print("meow")
             self.play_meow()
             self.last_sound_time = now
-            self.sound_interval = random.randint(600, 1200)
+            self.sound_interval = random.randint(60 ,180)
 
     def update_animation(self):
         if self.frames:
