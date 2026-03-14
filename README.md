@@ -15,7 +15,12 @@ A simple animated desktop pet built with Python and Tkinter.
 
 - Python  
 - Tkinter  
-- winsound  
+- winsound
+
+## Preview
+
+![Cat Demo](pre1.gif)
+![Cat Demo](pre2.gif)
 
 ## Run
 
