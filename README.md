@@ -19,8 +19,8 @@ A simple animated desktop pet built with Python and Tkinter.
 
 ## Preview
 
-![Cat Demo](pre1.gif)
-![Cat Demo](pre2.gif)
+![Cat Demo](preview/pre1.gif)
+![Cat Demo](preview/pre2.gif)
 
 ## Run
 
